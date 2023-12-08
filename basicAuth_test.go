@@ -1,6 +1,7 @@
 package gowebdav
 
 import (
+	"context"
 	"net/http"
 	"testing"
 )
@@ -45,7 +46,7 @@ func TestPreemtiveBasicAuth(t *testing.T) {
 	srv, _, _ := newAuthSrv(t, basicAuth)
 	defer srv.Close()
 	cli := NewAuthClient(srv.URL, auth)
-	if err := cli.Connect(); err != nil {
+	if err := cli.Connect(context.Background()); err != nil {
 		t.Fatalf("got error: %v, want nil", err)
 	}
 }

@@ -1,6 +1,7 @@
 package gowebdav
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/http"
@@ -8,7 +9,7 @@ import (
 	"strings"
 )
 
-func (c *Client) req(method, path string, body io.Reader, intercept func(*http.Request)) (rs *http.Response, err error) {
+func (c *Client) req(ctx context.Context, method, path string, body io.Reader, intercept func(*http.Request)) (rs *http.Response, err error) {
 	var redo bool
 	var r *http.Request
 	var uri = PathEscape(Join(c.root, path))
@@ -16,7 +17,7 @@ func (c *Client) req(method, path string, body io.Reader, intercept func(*http.R
 	defer auth.Close()
 
 	for { // TODO auth.continue() strategy(true|n times|until)?
-		if r, err = http.NewRequest(method, uri, body); err != nil {
+		if r, err = http.NewRequestWithContext(ctx, method, uri, body); err != nil {
 			return
 		}
 
@@ -59,8 +60,8 @@ func (c *Client) req(method, path string, body io.Reader, intercept func(*http.R
 	return rs, err
 }
 
-func (c *Client) mkcol(path string) (status int, err error) {
-	rs, err := c.req("MKCOL", path, nil, nil)
+func (c *Client) mkcol(ctx context.Context, path string) (status int, err error) {
+	rs, err := c.req(ctx, "MKCOL", path, nil, nil)
 	if err != nil {
 		return
 	}
@@ -74,14 +75,14 @@ func (c *Client) mkcol(path string) (status int, err error) {
 	return
 }
 
-func (c *Client) options(path string) (*http.Response, error) {
-	return c.req("OPTIONS", path, nil, func(rq *http.Request) {
+func (c *Client) options(ctx context.Context, path string) (*http.Response, error) {
+	return c.req(ctx, "OPTIONS", path, nil, func(rq *http.Request) {
 		rq.Header.Add("Depth", "0")
 	})
 }
 
-func (c *Client) propfind(path string, self bool, body string, resp interface{}, parse func(resp interface{}) error) error {
-	rs, err := c.req("PROPFIND", path, strings.NewReader(body), func(rq *http.Request) {
+func (c *Client) propfind(ctx context.Context, path string, self bool, body string, resp interface{}, parse func(resp interface{}) error) error {
+	rs, err := c.req(ctx, "PROPFIND", path, strings.NewReader(body), func(rq *http.Request) {
 		if self {
 			rq.Header.Add("Depth", "0")
 		} else {
@@ -106,6 +107,7 @@ func (c *Client) propfind(path string, self bool, body string, resp interface{},
 }
 
 func (c *Client) doCopyMove(
+	ctx context.Context,
 	method string,
 	oldpath string,
 	newpath string,
@@ -115,7 +117,7 @@ func (c *Client) doCopyMove(
 	r io.ReadCloser,
 	err error,
 ) {
-	rs, err := c.req(method, oldpath, nil, func(rq *http.Request) {
+	rs, err := c.req(ctx, method, oldpath, nil, func(rq *http.Request) {
 		rq.Header.Add("Destination", PathEscape(Join(c.root, newpath)))
 		if overwrite {
 			rq.Header.Add("Overwrite", "T")
@@ -131,8 +133,8 @@ func (c *Client) doCopyMove(
 	return
 }
 
-func (c *Client) copymove(method string, oldpath string, newpath string, overwrite bool) (err error) {
-	s, data, err := c.doCopyMove(method, oldpath, newpath, overwrite)
+func (c *Client) copymove(ctx context.Context, method string, oldpath string, newpath string, overwrite bool) (err error) {
+	s, data, err := c.doCopyMove(ctx, method, oldpath, newpath, overwrite)
 	if err != nil {
 		return
 	}
@@ -149,19 +151,19 @@ func (c *Client) copymove(method string, oldpath string, newpath string, overwri
 		log.Printf("TODO handle %s - %s multistatus result %s\n", method, oldpath, String(data))
 
 	case 409:
-		err := c.createParentCollection(newpath)
+		err := c.createParentCollection(ctx, newpath)
 		if err != nil {
 			return err
 		}
 
-		return c.copymove(method, oldpath, newpath, overwrite)
+		return c.copymove(ctx, method, oldpath, newpath, overwrite)
 	}
 
 	return NewPathError(method, oldpath, s)
 }
 
-func (c *Client) put(path string, stream io.Reader) (status int, err error) {
-	rs, err := c.req("PUT", path, stream, nil)
+func (c *Client) put(ctx context.Context, path string, stream io.Reader) (status int, err error) {
+	rs, err := c.req(ctx, "PUT", path, stream, nil)
 	if err != nil {
 		return
 	}
@@ -171,11 +173,11 @@ func (c *Client) put(path string, stream io.Reader) (status int, err error) {
 	return
 }
 
-func (c *Client) createParentCollection(itemPath string) (err error) {
+func (c *Client) createParentCollection(ctx context.Context, itemPath string) (err error) {
 	parentPath := path.Dir(itemPath)
 	if parentPath == "." || parentPath == "/" {
 		return nil
 	}
 
-	return c.MkdirAll(parentPath, 0755)
+	return c.MkdirAll(ctx, parentPath, 0755)
 }

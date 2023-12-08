@@ -2,6 +2,7 @@ package gowebdav
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -12,7 +13,7 @@ func TestEmptyAuth(t *testing.T) {
 	srv, _, _ := newAuthSrv(t, basicAuth)
 	defer srv.Close()
 	cli := NewAuthClient(srv.URL, auth)
-	if err := cli.Connect(); err == nil {
+	if err := cli.Connect(context.Background()); err == nil {
 		t.Fatalf("got nil want error")
 	}
 }
@@ -52,7 +53,7 @@ func TestRedirectAuthWIP(t *testing.T) {
 	srv, _, _ := newAuthSrv(t, dataHandler)
 	defer srv.Close()
 	cli := NewClient(srv.URL, "user", "password")
-	data, err := cli.Read("/hello.txt")
+	data, err := cli.Read(context.Background(), "/hello.txt")
 	if err != nil {
 		t.Logf("WIP got error=%v; want nil", err)
 	}

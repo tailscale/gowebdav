@@ -2,6 +2,7 @@ package gowebdav
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -56,7 +57,7 @@ func TestNewPassportAuth(t *testing.T) {
 	defer srv.Close()
 
 	cli := NewClient(srv.URL, user, pass)
-	data, err := cli.Read("/hello.txt")
+	data, err := cli.Read(context.Background(), "/hello.txt")
 	if err != nil {
 		t.Errorf("got error=%v; want nil", err)
 	}
