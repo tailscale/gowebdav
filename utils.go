@@ -63,7 +63,7 @@ func parseInt64(s *string) int64 {
 	return 0
 }
 
-func parseModified(s *string) time.Time {
+func parseTime(s *string) time.Time {
 	if t, e := time.Parse(time.RFC1123, *s); e == nil {
 		return t
 	}

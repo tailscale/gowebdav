@@ -1,6 +1,7 @@
 package gowebdav
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -12,6 +13,7 @@ type File struct {
 	name        string
 	contentType string
 	size        int64
+	created     time.Time
 	modified    time.Time
 	etag        string
 	isdir       bool
@@ -45,6 +47,11 @@ func (f File) Mode() os.FileMode {
 	}
 
 	return 0664
+}
+
+// BirthTime implements the webdav.BirthTimer interface
+func (f File) BirthTime(ctx context.Context) (time.Time, error) {
+	return f.created, nil
 }
 
 // ModTime returns the modified time of a file

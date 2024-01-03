@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"strings"
 
-	d "github.com/studio-b12/gowebdav"
+	d "github.com/tailscale/gowebdav"
 )
 
 func main() {

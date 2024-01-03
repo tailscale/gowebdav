@@ -112,6 +112,7 @@ type props struct {
 	Size        string   `xml:"DAV: prop>getcontentlength,omitempty"`
 	ContentType string   `xml:"DAV: prop>getcontenttype,omitempty"`
 	ETag        string   `xml:"DAV: prop>getetag,omitempty"`
+	Created     string   `xml:"DAV: prop>creationdate,omitempty"`
 	Modified    string   `xml:"DAV: prop>getlastmodified,omitempty"`
 }
 
@@ -154,7 +155,8 @@ func (c *Client) ReadDir(ctx context.Context, path string) ([]os.FileInfo, error
 				f.name = p.Name
 			}
 			f.path = path + f.name
-			f.modified = parseModified(&p.Modified)
+			f.created = parseTime(&p.Created)
+			f.modified = parseTime(&p.Modified)
 			f.etag = p.ETag
 			f.contentType = p.ContentType
 
@@ -182,6 +184,7 @@ func (c *Client) ReadDir(ctx context.Context, path string) ([]os.FileInfo, error
 				<d:getcontentlength/>
 				<d:getcontenttype/>
 				<d:getetag/>
+				<d:creationdate/>
 				<d:getlastmodified/>
 			</d:prop>
 		</d:propfind>`,
@@ -213,11 +216,13 @@ func (c *Client) Stat(ctx context.Context, path string) (os.FileInfo, error) {
 					f.path += "/"
 				}
 				f.size = 0
-				f.modified = parseModified(&p.Modified)
+				f.created = parseTime(&p.Created)
+				f.modified = parseTime(&p.Modified)
 				f.isdir = true
 			} else {
 				f.size = parseInt64(&p.Size)
-				f.modified = parseModified(&p.Modified)
+				f.created = parseTime(&p.Created)
+				f.modified = parseTime(&p.Modified)
 				f.isdir = false
 			}
 		}
@@ -234,6 +239,7 @@ func (c *Client) Stat(ctx context.Context, path string) (os.FileInfo, error) {
 				<d:getcontentlength/>
 				<d:getcontenttype/>
 				<d:getetag/>
+				<d:creationdate/>
 				<d:getlastmodified/>
 			</d:prop>
 		</d:propfind>`,
