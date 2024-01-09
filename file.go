@@ -29,9 +29,9 @@ func (f File) Name() string {
 	return f.name
 }
 
-// ContentType returns the content type of a file
-func (f File) ContentType() string {
-	return f.contentType
+// ContentType implements the webdav.ContentTyper interface
+func (f File) ContentType(ctx context.Context) (string, error) {
+	return f.contentType, nil
 }
 
 // Size returns the size of a file
