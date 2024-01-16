@@ -353,7 +353,17 @@ func (c *Client) Read(ctx context.Context, path string) ([]byte, error) {
 
 // ReadStream reads the stream for a given path
 func (c *Client) ReadStream(ctx context.Context, path string) (io.ReadCloser, error) {
-	rs, err := c.req(ctx, "GET", path, nil, nil)
+	return c.ReadStreamOffset(ctx, path, 0)
+}
+
+// ReadStreamOffset reads the stream for a given path, starting offset bytes
+// into the stream.
+func (c *Client) ReadStreamOffset(ctx context.Context, path string, offset int) (io.ReadCloser, error) {
+	rs, err := c.req(ctx, "GET", path, nil, func(req *http.Request) {
+		if offset > 0 {
+			req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+		}
+	})
 	if err != nil {
 		return nil, NewPathErrorErr("ReadStream", path, err)
 	}
