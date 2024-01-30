@@ -10,54 +10,28 @@ import (
 )
 
 func (c *Client) req(ctx context.Context, method, path string, body io.Reader, intercept func(*http.Request)) (rs *http.Response, err error) {
-	var redo bool
 	var r *http.Request
 	var uri = PathEscape(Join(c.root, path))
-	auth, body := c.auth.NewAuthenticator(body)
-	defer auth.Close()
 
-	for { // TODO auth.continue() strategy(true|n times|until)?
-		if r, err = http.NewRequestWithContext(ctx, method, uri, body); err != nil {
-			return
-		}
-
-		for k, vals := range c.headers {
-			for _, v := range vals {
-				r.Header.Add(k, v)
-			}
-		}
-
-		if err = auth.Authorize(c.c, r, path); err != nil {
-			return
-		}
-
-		if intercept != nil {
-			intercept(r)
-		}
-
-		if c.interceptor != nil {
-			c.interceptor(method, r)
-		}
-
-		if rs, err = c.c.Do(r); err != nil {
-			return
-		}
-
-		if redo, err = auth.Verify(c.c, rs, path); err != nil {
-			rs.Body.Close()
-			return nil, err
-		}
-		if redo {
-			rs.Body.Close()
-			if body, err = r.GetBody(); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		break
+	if r, err = http.NewRequestWithContext(ctx, method, uri, body); err != nil {
+		return
 	}
 
-	return rs, err
+	for k, vals := range c.headers {
+		for _, v := range vals {
+			r.Header.Add(k, v)
+		}
+	}
+
+	if intercept != nil {
+		intercept(r)
+	}
+
+	if c.interceptor != nil {
+		c.interceptor(method, r)
+	}
+
+	return c.c.Do(r)
 }
 
 func (c *Client) mkcol(ctx context.Context, path string) (status int, err error) {
